@@ -1,5 +1,6 @@
 export { ActionSheet, type SheetAction } from './ActionSheet';
 export { Button } from './Button';
+export { FadeInView, PressableScale } from './motion';
 export { Screen } from './Screen';
 export { Avatar, PersonChip, PersonLabel } from './PersonLabel';
 export { Badge, Card, Divider, EmptyState, SectionHeader } from './primitives';

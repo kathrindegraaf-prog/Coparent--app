@@ -67,6 +67,23 @@ export default function MoreScreen() {
         </View>
       </Card>
 
+      <SectionHeader title={nl.more.overview} />
+      <Card padded={false} style={{ marginBottom: spacing.xl }}>
+        <Row
+          icon="check-square"
+          title={nl.tasksScreen.title}
+          subtitle={nl.tasksScreen.subtitle}
+          onPress={() => router.push('/tasks')}
+        />
+        <View style={{ height: 1, backgroundColor: p.border, marginLeft: 56 }} />
+        <Row
+          icon="feather"
+          title={nl.assistant.ask}
+          subtitle={nl.assistant.intro}
+          onPress={() => router.push('/assistant')}
+        />
+      </Card>
+
       <SectionHeader title={nl.more.testing} />
       <Card padded={false} style={{ marginBottom: spacing.xl }}>
         <Row

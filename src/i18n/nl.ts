@@ -38,9 +38,39 @@ export const nl = {
     tasksSoon: 'Taken vandaag en morgen',
     deviationTitle: 'Afwijking van het schema',
     add: 'Toevoegen',
+    adjustDay: 'Dag aanpassen',
+    comingDays: 'Komende dagen',
+    reminders: 'Herinneringen',
+    allTasks: 'Alle taken',
+    noReminders: 'Niets te onthouden — rustig aan',
     noAppointments: 'Geen afspraken vandaag',
     noTasks: 'Niets op de planning — rustig aan',
     inDays: (n: number) => (n === 0 ? 'vandaag' : n === 1 ? 'morgen' : `over ${n} dagen`),
+  },
+
+  tasksScreen: {
+    title: 'Taken',
+    subtitle: 'Alles wat geregeld of meegenomen moet worden.',
+    open: 'Openstaand',
+    done: 'Afgerond',
+    empty: 'Nog geen taken. Voeg er een toe met de knop hieronder.',
+    add: 'Taak toevoegen',
+  },
+
+  assistant: {
+    ask: 'Vraag AI',
+    title: 'Assistent',
+    soon: 'Binnenkort',
+    intro: 'Straks helpt je assistent met het dagelijkse geregel — zodat jij er minder aan hoeft te denken.',
+    disclaimer: 'Deze functie is nog in voorbereiding. Er wordt nu nog niets verstuurd of verwerkt.',
+    ideasTitle: 'Waar de assistent straks bij helpt',
+    ideas: [
+      'Wie haalt Lotte woensdag na de tandarts op?',
+      'Maak een afspraak: voetbal, dinsdag 18.30 uur, Max.',
+      'Wat wijkt deze week af van het normale schema?',
+      'Herinner me morgen aan het schoolformulier.',
+    ],
+    inputPlaceholder: 'Straks kun je hier je vraag typen…',
   },
 
   schedule: {
@@ -50,6 +80,11 @@ export const nl = {
     nextMonth: 'Volgende maand',
     prevDay: 'Vorige dag',
     nextDay: 'Volgende dag',
+    prevWeek: 'Vorige week',
+    nextWeek: 'Volgende week',
+    thisWeek: 'Deze week',
+    viewMonth: 'Maand',
+    viewWeek: 'Week',
     weekend: 'Weekend',
     weekdays: ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'],
     months: [
@@ -142,6 +177,7 @@ export const nl = {
   more: {
     title: 'Meer',
     household: 'Ons gezin',
+    overview: 'Overzicht',
     testing: 'Testen',
     restoreDemo: 'Demodata herstellen',
     restoreDemoDesc: 'Zet alle afspraken, taken en aanpassingen terug naar de startsituatie.',

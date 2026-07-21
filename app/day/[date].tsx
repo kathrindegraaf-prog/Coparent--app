@@ -10,16 +10,13 @@ import {
   Badge,
   Button,
   Card,
-  EmptyState,
-  EventRow,
   SectionHeader,
-  TaskRow,
 } from '@/design/components';
 import { spacing, typography, usePalette } from '@/design/theme';
+import { AppointmentList, TaskList } from '@/features/lists';
 import { assignmentFor } from '@/features/schedule/engine';
 import { nl } from '@/i18n/nl';
-import { childrenLabel, formatDayLong, formatTime } from '@/lib/format';
-import { todayIso } from '@/lib/date';
+import { formatDayLong } from '@/lib/format';
 
 export default function DayDetailScreen() {
   const p = usePalette();
@@ -35,7 +32,6 @@ export default function DayDetailScreen() {
   const main = parentById(a.parentId);
   const appts = appointmentsOn(date);
   const tasks = tasksOn(date);
-  const today = todayIso('Europe/Amsterdam');
 
   const extraMealParent = a.extraMealParentId ? parentById(a.extraMealParentId) : null;
   const handoverDayParent = a.handover?.dayParentId ? parentById(a.handover.dayParentId) : null;
@@ -132,25 +128,10 @@ export default function DayDetailScreen() {
         <View>
           <SectionHeader title={nl.day.appointments} />
           <Card>
-            {appts.length === 0 ? (
-              <EmptyState icon="calendar" text={nl.day.noAppointments} />
-            ) : (
-              appts.map((appt, i) => {
-                const resp = parentById(appt.responsibleParentId);
-                return (
-                  <View key={appt.id}>
-                    {i > 0 ? <View style={{ height: 1, backgroundColor: p.border }} /> : null}
-                    <EventRow
-                      time={formatTime(appt.startTime)}
-                      title={appt.title}
-                      subtitle={[childrenLabel(appt.childIds, snapshot.children), appt.location].filter(Boolean).join(' · ')}
-                      accentColor={resp?.color ?? p.borderStrong}
-                      onPress={() => router.push({ pathname: '/appointment/[id]', params: { id: appt.id } })}
-                    />
-                  </View>
-                );
-              })
-            )}
+            <AppointmentList
+              appointments={appts}
+              onOpen={(id) => router.push({ pathname: '/appointment/[id]', params: { id } })}
+            />
           </Card>
         </View>
 
@@ -158,27 +139,11 @@ export default function DayDetailScreen() {
         <View>
           <SectionHeader title={nl.day.tasks} />
           <Card>
-            {tasks.length === 0 ? (
-              <EmptyState icon="check-circle" text={nl.day.noTasks} />
-            ) : (
-              tasks.map((task, i) => {
-                const resp = parentById(task.responsibleParentId);
-                const kid = childById(task.childId);
-                return (
-                  <View key={task.id}>
-                    {i > 0 ? <View style={{ height: 1, backgroundColor: p.border }} /> : null}
-                    <TaskRow
-                      title={task.title}
-                      meta={[kid ? kid.name : nl.common.general, resp ? nl.day.responsible(resp.displayName) : ''].filter(Boolean).join(' · ')}
-                      done={task.status === 'done'}
-                      accentColor={resp?.color}
-                      onToggle={() => toggleTask(task.id)}
-                      onPress={() => router.push({ pathname: '/task/[id]', params: { id: task.id } })}
-                    />
-                  </View>
-                );
-              })
-            )}
+            <TaskList
+              tasks={tasks}
+              onToggle={toggleTask}
+              onOpen={(id) => router.push({ pathname: '/task/[id]', params: { id } })}
+            />
           </Card>
         </View>
 

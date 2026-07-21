@@ -26,6 +26,18 @@ export const radius = {
   pill: 999,
 } as const;
 
+/** Layout-tokens. `maxContentWidth` houdt de app op telefoon-breedte, ook op web/desktop. */
+export const layout = {
+  maxContentWidth: 620,
+} as const;
+
+/** Bewegingstokens — subtiel en rustig. */
+export const motion = {
+  fast: 140,
+  base: 220,
+  slow: 320,
+} as const;
+
 const systemFont = Platform.select({
   ios: 'System',
   android: 'sans-serif',

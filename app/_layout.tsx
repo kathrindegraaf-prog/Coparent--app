@@ -17,6 +17,8 @@ export default function RootLayout() {
           <Stack.Screen name="task/[id]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="override/[date]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="scenarios" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="tasks" options={{ presentation: 'card' }} />
+          <Stack.Screen name="assistant" options={{ presentation: 'card' }} />
         </Stack>
       </DataProvider>
     </SafeAreaProvider>
