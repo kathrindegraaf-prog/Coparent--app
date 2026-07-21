@@ -1,0 +1,62 @@
+name: Web-versie publiceren (GitHub Pages)
+
+# Bouwt de webversie van de app en zet 'm online op GitHub Pages.
+# Draait automatisch bij elke push naar de ontwikkelbranch, en kan handmatig
+# gestart worden via de "Run workflow"-knop.
+
+on:
+  push:
+    branches:
+      - claude/co-parenting-app-mvp-tyotg7
+  workflow_dispatch:
+
+# Rechten die de deploy naar Pages nodig heeft.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Zorg dat er niet twee deploys tegelijk lopen.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code ophalen
+        uses: actions/checkout@v4
+
+      - name: Node.js instellen
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Pakketten installeren
+        run: npm ci
+
+      - name: Webversie bouwen
+        run: npx expo export --platform web
+
+      - name: SPA-fallback en Jekyll uitschakelen
+        run: |
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+
+      - name: Artifact uploaden
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Naar GitHub Pages publiceren
+        id: deployment
+        uses: actions/deploy-pages@v4
