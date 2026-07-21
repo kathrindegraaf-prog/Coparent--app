@@ -1,130 +1,81 @@
 /**
- * Eén dag in het maandraster. Kleur = ouder van die nacht. Overdrachtsdagen
- * (vrijdag) krijgen een tweekleurige split; een ster markeert een extra
- * contactmoment. Toegankelijk via een beschrijvend label.
+ * Eén dag in het maandraster. Rustig en kleur-gecodeerd: zachte oudertint als
+ * achtergrond, dagnummer in de oudertint. Vandaag krijgt een rand; afspraken en
+ * afwijkingen krijgen elk een eigen subtiele stip. Geen drukke tekst in het vakje.
  */
 
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { HouseholdSnapshot } from '@/data/store';
-import { usePalette, radius, typography } from '@/design/theme';
-import { parseIso } from '@/lib/date';
-import { nl } from '@/i18n/nl';
-import type { DayAssignment } from './engine';
-import { parentInfo } from './useSchedule';
+import { radius, typography, usePalette } from '@/design/theme';
 
-interface Props {
-  date: string | null;
-  assignment: DayAssignment | null;
-  snapshot: HouseholdSnapshot | null;
+export interface DayCellStyle {
+  dayNum: number;
+  softBg: string;
+  numColor: string;
+  /** Zachte tint van de overdracht-ouder (linkerstrook), indien afwijkend. */
+  handoverBg?: string;
   isToday: boolean;
-  onPress: (date: string) => void;
+  hasAppointment: boolean;
+  deviation: boolean;
+  isStar: boolean;
+  label: string;
+  onPress: () => void;
 }
 
-function DayCellBase({ date, assignment, snapshot, isToday, onPress }: Props) {
-  const palette = usePalette();
-
-  if (!date || !assignment) {
-    return <View style={styles.cell} accessibilityElementsHidden />;
+function DayCellBase(props: DayCellStyle | { empty: true }) {
+  const p = usePalette();
+  if ('empty' in props) {
+    return <View style={styles.cell} accessibilityElementsHidden pointerEvents="none" />;
   }
-
-  const dayNum = parseIso(date).getUTCDate();
-  const main = parentInfo(snapshot, assignment.parentId);
-  const handoverDay = assignment.handover
-    ? parentInfo(snapshot, assignment.handover.dayParentId)
-    : null;
-
-  const bg = main?.color ?? palette.surfaceAlt;
-  const fg = main ? '#FFFFFF' : palette.textSoft;
-
-  const whoLabel = main
-    ? assignment.handover
-      ? nl.day.dayThenEvening(handoverDay?.name ?? nl.schedule.unassigned, main.name)
-      : nl.day.withParent(main.name)
-    : nl.schedule.unassigned;
+  const { dayNum, softBg, numColor, handoverBg, isToday, hasAppointment, deviation, isStar, label, onPress } = props;
 
   return (
     <Pressable
-      onPress={() => onPress(date)}
+      onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={nl.a11y.dayCell(String(dayNum), whoLabel)}
-      style={({ pressed }) => [styles.cell, pressed && styles.pressed]}
+      accessibilityLabel={label}
+      style={styles.cell}
     >
-      <View style={[styles.block, { backgroundColor: bg }]}>
-        {/* Overdracht: linkerstrook in de kleur van de dag-ouder. */}
-        {assignment.handover && handoverDay && (
-          <View style={[styles.handoverStripe, { backgroundColor: handoverDay.color }]} />
-        )}
-        {assignment.handover && (
-          <Text style={[styles.handoverMark, { color: fg }]} accessibilityElementsHidden>
-            →
-          </Text>
-        )}
+      <View
+        style={[
+          styles.block,
+          { backgroundColor: softBg },
+          isToday && { borderColor: p.text, borderWidth: 2 },
+        ]}
+      >
+        {handoverBg ? <View style={[styles.handover, { backgroundColor: handoverBg }]} /> : null}
 
-        <Text style={[styles.dayNum, { color: fg }]}>{dayNum}</Text>
+        <Text style={[styles.num, { color: numColor }, isToday && { fontWeight: '800' }]}>
+          {dayNum}
+        </Text>
 
-        {assignment.isStar && (
-          <Text
-            style={[styles.star, { color: palette.star }]}
-            accessibilityLabel={nl.a11y.starBadge}
-          >
-            ★
-          </Text>
-        )}
-
-        {isToday && <View style={[styles.todayDot, { backgroundColor: fg }]} />}
+        <View style={styles.indicators}>
+          {hasAppointment ? <View style={[styles.dot, { backgroundColor: numColor }]} /> : null}
+          {deviation ? <View style={[styles.dot, styles.ring, { borderColor: p.star }]} /> : null}
+          {isStar ? <Text style={[styles.star, { color: p.star }]}>★</Text> : null}
+        </View>
       </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  cell: {
-    flex: 1,
-    aspectRatio: 1,
-    padding: 2,
-  },
-  pressed: { opacity: 0.8 },
+  cell: { flex: 1, aspectRatio: 0.92, padding: 3 },
   block: {
     flex: 1,
-    borderRadius: radius.md,
-    padding: 6,
-    justifyContent: 'flex-start',
+    borderRadius: radius.sm,
+    paddingHorizontal: 7,
+    paddingTop: 6,
+    justifyContent: 'space-between',
     overflow: 'hidden',
+    borderWidth: 0,
   },
-  handoverStripe: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: '38%',
-  },
-  handoverMark: {
-    position: 'absolute',
-    left: 4,
-    bottom: 3,
-    fontSize: 12,
-    fontWeight: '700',
-    opacity: 0.9,
-  },
-  dayNum: {
-    ...typography.label,
-    fontSize: 14,
-  },
-  star: {
-    position: 'absolute',
-    right: 5,
-    top: 4,
-    fontSize: 13,
-  },
-  todayDot: {
-    position: 'absolute',
-    right: 6,
-    bottom: 6,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
+  handover: { position: 'absolute', left: 0, top: 0, bottom: 0, width: '34%', opacity: 0.9 },
+  num: { ...typography.label, fontSize: 15 },
+  indicators: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 6, minHeight: 8 },
+  dot: { width: 6, height: 6, borderRadius: 3 },
+  ring: { backgroundColor: 'transparent', borderWidth: 1.5 },
+  star: { fontSize: 11, lineHeight: 12, marginTop: -1 },
 });
 
 export const DayCell = memo(DayCellBase);

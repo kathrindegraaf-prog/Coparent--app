@@ -1,57 +1,95 @@
-# Samen — co-ouderschaps- & gezinsapp (MVP)
+# Samen — co-ouderschaps- & gezinsapp (prototype)
 
-Een mooie, moderne app die de kinderplanning en de communicatie daaromheen
-regelt. Voor gescheiden/apart wonende ouders én gewone gezinnen. Bewust **niet**
-voor high-conflict/rechtbank — rustig, warm, mobiel-first, en één prijs per
-gezin.
+Een warme, rustige app die de kinderplanning en de communicatie daaromheen
+regelt. Voor ouders die net apart wonen en goed met elkaar willen blijven
+afstemmen — **niet** als juridisch bewijssysteem, niet voor high-conflict.
 
-## Status
+Doel: de dagelijkse mentale belasting verlagen door vier vragen meteen te
+beantwoorden: waar zijn de kinderen vandaag, wat staat er gepland, wie regelt
+wat, en wat wijkt af van het normale schema.
 
-**Stap 1 — het gedeelde schema (functie 1): werkend.**
+## Wat er in deze iteratie is gebouwd
 
-- Terugkerend schema dat automatisch doorloopt: vaste weekdagen per ouder +
-  weekenden om-en-om (vrijdagavond t/m zondag, met overdracht op vrijdag).
-- Maand vooruit/terug, kleur per ouder, weekend visueel gescheiden van
-  doordeweeks (blokkenschema).
-- Afgeleid uit regels + overrides — geen los record per dag.
-- Draait lokaal (AsyncStorage) met een demo-gezin; nog geen backend nodig.
+Een volledig klikbaar, **lokaal werkend** prototype (nog geen backend, login of
+push). Alles draait op AsyncStorage en is direct te testen.
 
-Volgende stappen: dag-override + extra contactmoment bewerken (functie 2),
-berichten per dag (functie 3), Supabase (EU) koppelen, push, delen via link.
+- **Navigatie** — bottom-tabs: **Vandaag**, **Schema**, **Meer**. De app opent
+  op Vandaag.
+- **Vandaag** — rustig dashboard: datum, bij welke ouder Max & Lotte vandaag
+  zijn, volgende wisselmoment, afspraken van vandaag, taken van vandaag en
+  morgen, afwijkingen van het schema, en één knop **Toevoegen**.
+- **Schema** — verbeterde maandweergave: kleur per ouder (Kathrin terracotta,
+  Pieter warm blauw), weekend visueel gescheiden, vandaag met rand, een subtiele
+  stip bij afspraken en een rustige ring bij afwijkingen. Tik een dag voor het
+  dagdetail; blader per maand.
+- **Dagdetail** — verblijf (incl. weekend/overdracht/per-kind), halen & brengen,
+  afspraken, taken, extra eet-/contactmomenten en de reden van een afwijking.
+  Acties: afspraak toevoegen, taak toevoegen, verblijf eenmalig aanpassen, extra
+  eet-/contactmoment.
+- **Afspraken** — titel, datum, begin-/eindtijd, kinderen, locatie,
+  verantwoordelijke ouder, wie brengt/haalt, notitie en een gekoppelde taak.
+  Lokaal toevoegen, bewerken en verwijderen.
+- **Taken (mental load)** — titel, kind of algemeen, verantwoordelijke ouder,
+  deadline en status open/afgerond. Bewust simpel.
+- **Eenmalige aanpassingen** — voor één datum: verblijfsouder wijzigen, per kind
+  anders indelen, extra eetmoment bij de andere ouder, een haal-/brengafspraak en
+  een korte reden. Verandert het vaste schema nooit permanent.
+- **Testbaarheid** — onder **Meer**: “Demodata herstellen” en een pagina
+  **Testscenario’s** met tien opdrachten.
+
+De terugkerende planning en de schema-engine uit de vorige stap zijn behouden:
+ma+di bij Pieter, wo+do bij Kathrin, weekenden om-en-om (vr-avond t/m zo, met
+overdracht op vrijdag). Het schema wordt afgeleid uit regels + overrides — geen
+los record per dag.
 
 ## Draaien
 
 ```bash
 npm install
-npm start        # open in Expo Go (iOS/Android) of druk 'w' voor web
+npm start        # Expo Go (iOS/Android) of druk 'w' voor web
 ```
 
-Engine-tests:
+Kwaliteitschecks:
 
 ```bash
-npm test
+npm test         # schema-engine + overrides (18 tests)
 npm run typecheck
 ```
+
+## Testen (kort)
+
+1. Open de app → **Vandaag** laat zien waar de kinderen zijn en de volgende wissel.
+2. **Toevoegen** → afspraak/taak/aanpassing.
+3. Tik in **Schema** op een dag → dagdetail met alle acties.
+4. Onder **Meer → Testscenario’s** staat een lijstje opdrachten; **Demodata
+   herstellen** zet alles terug.
 
 ## Structuur
 
 ```
-app/                      expo-router schermen (index = schema, day/[date] = dagdetail)
+app/                         expo-router
+  (tabs)/  index.tsx (Vandaag), schema.tsx, meer.tsx, _layout.tsx (bottom-tabs)
+  day/[date].tsx             dagdetail
+  appointment/[id].tsx       afspraak toevoegen/bewerken (modal)
+  task/[id].tsx              taak toevoegen/bewerken (modal)
+  override/[date].tsx        eenmalige aanpassing (modal)
+  scenarios.tsx              testscenario's
 src/
-  data/       types.ts (datamodel), store.ts (interface), localStore.ts, seed.ts
+  data/       types.ts (datamodel), store.ts (interface), localStore.ts,
+              seed.ts (demodata), DataContext.tsx (gedeelde state + CRUD)
+  design/     theme.ts (tokens) + components/ (Card, Button, rows, form, …)
   features/schedule/  engine.ts (+tests), MonthGrid.tsx, DayCell.tsx, useSchedule.ts
-  design/theme.ts     tokens: kleur per ouder, licht/donker
-  i18n/nl.ts          Nederlandse strings
-  lib/date.ts         pure datum-helpers
-docs/         datamodel.md, privacy.md (AVG)
+  i18n/nl.ts  Nederlandse strings
+  lib/        date.ts (pure datum-helpers), format.ts
+docs/         datamodel.md, privacy.md
 ```
 
 ## Techniek
 
-Expo (React Native) + TypeScript. Backend wordt Supabase in een EU-regio
-(auth, Postgres, realtime, push) — de datalaag zit achter een repository-interface
-(`src/data/store.ts`), zodat we de lokale store later omwisselen zonder de UI te
-raken.
+Expo (React Native) + TypeScript + expo-router. Eén gedeelde `DataProvider`
+(context + AsyncStorage) is de bron van waarheid; de datalaag zit achter een
+repository-interface (`src/data/store.ts`), zodat later Supabase (EU) ingeplugd
+kan worden zonder de UI te raken. Icons via `@expo/vector-icons` (met Expo
+meegeleverd); geen nieuwe zware libraries. Web en mobiel werken beide.
 
-Zie [`docs/privacy.md`](docs/privacy.md) voor de AVG-aanpak (dataminimalisatie,
-EU-data, geen tracking, verwijderoptie).
+Zie [`docs/privacy.md`](docs/privacy.md) voor de AVG-aanpak.

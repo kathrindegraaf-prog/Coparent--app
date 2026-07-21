@@ -1,5 +1,5 @@
 import type { Profile, ScheduleOverride, ScheduleRule } from '@/data/types';
-import { assignmentFor } from './engine';
+import { assignmentFor, nextSwitch } from './engine';
 
 const parentA: Profile = {
   id: 'pa',
@@ -127,5 +127,72 @@ describe('overrides winnen van de regel', () => {
     expect(a.parentId).toBe('pb');
     expect(a.isStar).toBe(true);
     expect(a.overridden).toBe(true);
+  });
+});
+
+describe('afwijking-vlag', () => {
+  it('een dag zonder override wijkt niet af', () => {
+    expect(assignmentFor('2026-07-20', rule, no, parents).deviation).toBe(false);
+  });
+
+  it('een override met alleen een reden telt niet als afwijking', () => {
+    const overrides: ScheduleOverride[] = [
+      {
+        id: 'o', householdId: 'hh', date: '2026-07-20', assignedTo: null,
+        isStar: false, reason: 'ter info', createdBy: 'pa', createdAt: '',
+      },
+    ];
+    expect(assignmentFor('2026-07-20', rule, overrides, parents).deviation).toBe(false);
+  });
+
+  it('een herverdeling telt als afwijking', () => {
+    const overrides: ScheduleOverride[] = [
+      {
+        id: 'o', householdId: 'hh', date: '2026-07-20', assignedTo: 'pb',
+        isStar: false, createdBy: 'pa', createdAt: '',
+      },
+    ];
+    expect(assignmentFor('2026-07-20', rule, overrides, parents).deviation).toBe(true);
+  });
+});
+
+describe('per-kind indeling', () => {
+  it('deelt één kind anders in en markeert de dag als afwijking', () => {
+    const overrides: ScheduleOverride[] = [
+      {
+        id: 'o', householdId: 'hh', date: '2026-07-20', assignedTo: null,
+        childAssignments: [{ childId: 'kind-1', parentId: 'pb' }],
+        isStar: false, createdBy: 'pa', createdAt: '',
+      },
+    ];
+    const a = assignmentFor('2026-07-20', rule, overrides, parents);
+    expect(a.parentId).toBe('pa'); // hoofd-ouder blijft de regel
+    expect(a.childAssignments).toEqual([{ childId: 'kind-1', parentId: 'pb' }]);
+    expect(a.deviation).toBe(true);
+  });
+});
+
+describe('extra eetmoment', () => {
+  it('markeert een extra eetmoment bij de andere ouder in een weekend', () => {
+    // 2026-07-26 (zondag) is een A-weekend; extra eten bij B.
+    const overrides: ScheduleOverride[] = [
+      {
+        id: 'o', householdId: 'hh', date: '2026-07-26', assignedTo: null,
+        extraMealParentId: 'pb', isStar: false, createdBy: 'pa', createdAt: '',
+      },
+    ];
+    const a = assignmentFor('2026-07-26', rule, overrides, parents);
+    expect(a.parentId).toBe('pa'); // blijft bij de weekendouder
+    expect(a.extraMealParentId).toBe('pb');
+    expect(a.deviation).toBe(true);
+  });
+});
+
+describe('volgende wissel', () => {
+  it('vindt de eerstvolgende dag waarop de ouder wisselt', () => {
+    // di 21 juli = A (weekdag). wo 22 juli = B. Dus de wissel is 22 juli.
+    const s = nextSwitch('2026-07-21', rule, no, parents);
+    expect(s?.date).toBe('2026-07-22');
+    expect(s?.parentId).toBe('pb');
   });
 });

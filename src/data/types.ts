@@ -1,9 +1,9 @@
 /**
  * Datamodel — single source of truth voor de app.
  *
- * Deze types beschrijven precies wat we in de (lokale) datalaag opslaan en later
- * 1-op-1 in Supabase-tabellen mappen. Het dag-schema wordt NIET als losse
- * dagrecords opgeslagen, maar afgeleid uit `ScheduleRule` + `ScheduleOverride[]`.
+ * Deze types beschrijven wat we lokaal (AsyncStorage) opslaan. Het dag-schema
+ * wordt NIET als losse dagrecords opgeslagen, maar afgeleid uit `ScheduleRule` +
+ * `ScheduleOverride[]` door de engine.
  */
 
 /** Rol van een ouder binnen het gezin. MVP: twee ouders. */
@@ -15,23 +15,25 @@ export type IsoWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 /** Een datum in `YYYY-MM-DD` (lokale kalenderdatum, geen tijdzone). */
 export type IsoDate = string;
 
+/** Tijd als `HH:MM` (24-uurs). */
+export type IsoTime = string;
+
 /** Het gezin / huishouden. */
 export interface Household {
   id: string;
   name: string;
-  /** IANA-tijdzone, bv. "Europe/Amsterdam". */
   timezone: string;
   plan: 'free' | 'premium';
   createdAt: string;
 }
 
-/** Een ouder (of gezinslid) met eigen kleur. */
+/** Een ouder met eigen kleur. */
 export interface Profile {
   id: string;
   householdId: string;
   displayName: string;
   role: ParentRole;
-  /** Hex-kleur die deze ouder in het schema krijgt, bv. "#2F8F83". */
+  /** Hex-kleur die deze ouder in het schema krijgt. */
   color: string;
   isOwner: boolean;
   createdAt: string;
@@ -45,53 +47,92 @@ export interface Child {
   createdAt: string;
 }
 
-/**
- * De terugkerende schema-regel. Eén actieve regel per gezin (versioneerbaar via
- * `activeFrom`). Hieruit + de overrides leiden we het volledige schema af.
- */
+/** De terugkerende schema-regel. Eén actieve regel per gezin. */
 export interface ScheduleRule {
   id: string;
   householdId: string;
-  /** Vanaf welke datum deze regel geldt. */
   activeFrom: IsoDate;
-
-  /**
-   * Vaste doordeweekse toewijzing: weekdag (1..5) -> profileId.
-   * Dagen die hier niet in staan (bv. vrijdag) vallen onder de weekendregel of
-   * blijven onbepaald tot er een override is.
-   */
+  /** Weekdag (1..5) -> profileId. Dagen die hier niet in staan vallen onder de weekendregel. */
   weekdayAssignment: Partial<Record<IsoWeekday, string>>;
-
   weekendEnabled: boolean;
-  /**
-   * Welke dagen tot het weekendblok horen, bv. [5, 6, 7] = vr, za, zo.
-   * Bij `fridayHandover` telt vrijdag als overdrachtsdag (overdag nog de
-   * doordeweekse ouder, 's avonds/nacht de weekendouder).
-   */
+  /** Welke dagen tot het weekendblok horen, bv. [5,6,7] = vr, za, zo. */
   weekendDays: IsoWeekday[];
   /** Weekend start vrijdagavond (overdracht) i.p.v. hele vrijdag. */
   fridayHandover: boolean;
-  /** Een bekend weekend (elke datum in dat weekend) als ankerpunt voor de rotatie. */
   weekendAnchorDate: IsoDate;
-  /** De ouder die het ankerweekend heeft. Weekends wisselen daarna om-en-om. */
   weekendAnchorParent: string;
 }
 
-/** Een override voor één specifieke datum. Wint altijd van de regel. */
+/** Per-kind afwijkende indeling op één datum. */
+export interface ChildAssignment {
+  childId: string;
+  parentId: string;
+}
+
+/**
+ * Een eenmalige aanpassing voor één datum. Wint van de regel, maar verandert het
+ * terugkerende basisschema nooit permanent.
+ */
 export interface ScheduleOverride {
   id: string;
   householdId: string;
   date: IsoDate;
-  /** Toegewezen ouder voor deze dag; null = alleen een ster, geen herverdeling. */
+  /** Hele dag naar deze ouder; null = geen volledige herverdeling. */
   assignedTo: string | null;
-  /** "Extra contactmoment" — een ster op de dag. */
+  /** Alleen bepaalde kinderen anders ingedeeld (los van `assignedTo`). */
+  childAssignments?: ChildAssignment[];
+  /** Extra eetmoment bij deze ouder (bv. zondag eten bij de andere ouder). */
+  extraMealParentId?: string | null;
+  /** Extra contactmoment (ster). */
   isStar: boolean;
+  /** Vrij tekstveld voor een haal-/brengafspraak. */
+  logistics?: string;
+  /** Korte reden voor de aanpassing. */
+  reason?: string;
   note?: string;
   createdBy: string;
   createdAt: string;
 }
 
-/** Kort bericht, gekoppeld aan een dag/blok. Gedeeld, zichtbaar voor beide ouders. */
+/** Een afspraak, gekoppeld aan een dag. */
+export interface Appointment {
+  id: string;
+  householdId: string;
+  title: string;
+  date: IsoDate;
+  startTime?: IsoTime;
+  endTime?: IsoTime;
+  /** Eén of meer kinderen. Leeg = hele gezin. */
+  childIds: string[];
+  location?: string;
+  /** Verantwoordelijke ouder. */
+  responsibleParentId?: string | null;
+  /** Wie brengt. */
+  broughtById?: string | null;
+  /** Wie haalt. */
+  pickedUpById?: string | null;
+  note?: string;
+  /** Gekoppelde taak of meeneemitem. */
+  linkedTaskId?: string | null;
+  createdAt: string;
+}
+
+/** Een taak (mental load). Bewust simpel gehouden. */
+export interface Task {
+  id: string;
+  householdId: string;
+  title: string;
+  /** Kind waar de taak over gaat; null = algemeen. */
+  childId?: string | null;
+  responsibleParentId?: string | null;
+  /** Deadline als datum. */
+  deadline?: IsoDate | null;
+  status: 'open' | 'done';
+  linkedAppointmentId?: string | null;
+  createdAt: string;
+}
+
+/** Kort bericht, gekoppeld aan een dag/blok (toekomstige functie 3). */
 export interface Message {
   id: string;
   householdId: string;
@@ -101,7 +142,7 @@ export interface Message {
   createdAt: string;
 }
 
-/** Persoonlijk vs gedeeld item (functie 5). */
+/** Persoonlijk vs gedeeld item (toekomstige functie 5). */
 export interface Item {
   id: string;
   householdId: string;
@@ -112,7 +153,7 @@ export interface Item {
   createdAt: string;
 }
 
-/** Uitnodiging via link (functie 6). */
+/** Uitnodiging via link (toekomstige functie 6). */
 export interface Invite {
   id: string;
   householdId: string;

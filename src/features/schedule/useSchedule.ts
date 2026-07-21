@@ -1,46 +1,23 @@
 /**
- * Hook die het gezin-snapshot laadt en per datum de toewijzing beschikbaar maakt.
- * Houdt ook de zichtbare maand bij (vooruit/terug klikken).
+ * Hook rond de gedeelde data-context: maandnavigatie + per-datum toewijzing via
+ * de engine. De data zelf komt uit `DataProvider`, zodat wijzigingen overal
+ * meteen doorwerken.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { localStore } from '@/data/localStore';
+import { useCallback, useMemo, useState } from 'react';
+import { useData } from '@/data/DataContext';
 import type { HouseholdSnapshot } from '@/data/store';
 import { todayIso } from '@/lib/date';
-import { assignmentFor, type DayAssignment } from './engine';
+import { assignmentFor, nextSwitch, type DayAssignment } from './engine';
 
-export interface UseSchedule {
-  loading: boolean;
-  snapshot: HouseholdSnapshot | null;
-  year: number;
-  month0: number;
-  goPrevMonth: () => void;
-  goNextMonth: () => void;
-  goToday: () => void;
-  /** Toewijzing voor één datum (of null zolang er geen data is). */
-  assignment: (date: string) => DayAssignment | null;
-  reload: () => Promise<void>;
-}
-
-export function useSchedule(): UseSchedule {
-  const [snapshot, setSnapshot] = useState<HouseholdSnapshot | null>(null);
-  const [loading, setLoading] = useState(true);
-
+export function useSchedule() {
+  const { snapshot, loading } = useData();
   const today = todayIso('Europe/Amsterdam');
+
   const [{ year, month0 }, setMonth] = useState(() => {
     const d = new Date(today + 'T00:00:00Z');
     return { year: d.getUTCFullYear(), month0: d.getUTCMonth() };
   });
-
-  const reload = useCallback(async () => {
-    const snap = await localStore.getSnapshot();
-    setSnapshot(snap);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    reload();
-  }, [reload]);
 
   const goPrevMonth = useCallback(() => {
     setMonth((m) => {
@@ -69,23 +46,28 @@ export function useSchedule(): UseSchedule {
     [snapshot]
   );
 
-  return useMemo(
-    () => ({
-      loading,
-      snapshot,
-      year,
-      month0,
-      goPrevMonth,
-      goNextMonth,
-      goToday,
-      assignment,
-      reload,
-    }),
-    [loading, snapshot, year, month0, goPrevMonth, goNextMonth, goToday, assignment, reload]
-  );
+  const upcomingSwitch = useMemo(() => {
+    if (!snapshot) return null;
+    return nextSwitch(today, snapshot.rule, snapshot.overrides, snapshot.profiles);
+  }, [snapshot, today]);
+
+  return {
+    loading,
+    snapshot,
+    today,
+    year,
+    month0,
+    goPrevMonth,
+    goNextMonth,
+    goToday,
+    assignment,
+    upcomingSwitch,
+  };
 }
 
-/** Kleine helper: geef de kleur/naam van een ouder op basis van id. */
+export type UseSchedule = ReturnType<typeof useSchedule>;
+
+/** Kleur/naam van een ouder op basis van id. */
 export function parentInfo(snapshot: HouseholdSnapshot | null, id: string | null) {
   if (!snapshot || !id) return null;
   const p = snapshot.profiles.find((x) => x.id === id);
