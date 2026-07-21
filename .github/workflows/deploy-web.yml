@@ -39,6 +39,11 @@ jobs:
 
       - name: Webversie bouwen
         run: npx expo export --platform web
+        env:
+          # Leeg = lokale demo-modus. Zodra deze secrets in de repo staan,
+          # bouwt hij de gedeelde (cloud) versie.
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: SPA-fallback en Jekyll uitschakelen
         run: |
